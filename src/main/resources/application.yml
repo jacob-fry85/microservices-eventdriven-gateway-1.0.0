@@ -1,0 +1,59 @@
+server:
+  port: 8000
+spring:
+  config:
+    import: consul:localhost:8500
+  application:
+    name: gateway
+  cloud:
+    loadbalancer:
+      ribbon:
+        # Not needed since we excluded the dependency, but
+        # still good to add it here for better readability
+        enabled: false
+    consul:
+      config:
+        data-key: application.yml
+        prefixes: config
+        format: yaml
+        default-context: defaults
+      enabled: true
+      discovery:
+        # Get only services that are passing the health check
+        query-passing: true
+    gateway:
+      default-filters:
+        - name: Retry
+          args:
+            retries: 3
+            methods: GET,POST
+      routes:
+        - id: multiplication
+          uri: lb://multiplication/
+          predicates:
+            - Path=/challenges/**,/attempts,/attempts/**,/users/**
+        - id: gamification
+          uri: lb://gamification/
+          predicates:
+            - Path=/leaders
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedHeaders:
+              - "*"
+            allowedMethods:
+              - "GET"
+              - "POST"
+              - "OPTIONS"
+
+# ... route config
+#logging:
+#  level:
+#    org.springframework.cloud.gateway.handler.predicate: trace
+
+logging:
+  level:
+    org.springframework.amqp.rabbit.connection.CachingConnectionFactory: WARN
+
+Access-Control-Allow-Origin: http://localhost:3000
